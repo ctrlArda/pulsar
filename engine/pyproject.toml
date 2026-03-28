@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "helioguard-engine"
+version = "0.1.0"
+description = "HELIOGUARD autonomous space weather engine"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116.0",
+  "geomag>=0.9.2015",
+  "httpx>=0.28.1",
+  "numpy>=2.2.4",
+  "pandas>=2.3.0",
+  "pydantic-settings>=2.10.1",
+  "python-dotenv>=1.1.0",
+  "sse-starlette>=2.3.6",
+  "uvicorn[standard]>=0.35.0",
+  "xgboost>=3.0.0"
+]
+
+[project.scripts]
+helioguard-train = "helioguard.training.train_xgboost:main"
+helioguard-jury-test = "helioguard.jury_smoke_test:main"
+
+[tool.setuptools.packages.find]
+where = ["."]

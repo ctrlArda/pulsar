@@ -1,0 +1,46 @@
+[
+  {
+    "name": "storm-halloween-2003",
+    "month": "200310",
+    "start": "2003-10-28T00:00:00Z",
+    "end": "2003-10-31T23:59:00Z",
+    "source_url": "https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/monthly_1min/omni_min200310.asc",
+    "output_path": "C:\\Users\\ardau\\Desktop\\tuah\\data\\training\\storm-halloween-2003.csv",
+    "rows": 2548,
+    "starts_at": "2003-10-28T00:00:00+00:00",
+    "ends_at": "2003-10-31T23:59:00+00:00"
+  },
+  {
+    "name": "storm-may-2024",
+    "month": "202405",
+    "start": "2024-05-10T00:00:00Z",
+    "end": "2024-05-13T23:59:00Z",
+    "source_url": "https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/monthly_1min/omni_min202405.asc",
+    "output_path": "C:\\Users\\ardau\\Desktop\\tuah\\data\\training\\storm-may-2024.csv",
+    "rows": 3842,
+    "starts_at": "2024-05-10T08:04:00+00:00",
+    "ends_at": "2024-05-13T23:51:00+00:00"
+  },
+  {
+    "name": "storm-jan-2026",
+    "month": "202601",
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-31T23:59:00Z",
+    "source_url": "https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/monthly_1min/omni_min202601.asc",
+    "output_path": "C:\\Users\\ardau\\Desktop\\tuah\\data\\training\\storm-jan-2026.csv",
+    "rows": 32131,
+    "starts_at": "2026-01-01T00:00:00+00:00",
+    "ends_at": "2026-01-31T23:56:00+00:00"
+  },
+  {
+    "name": "storm-feb-2026",
+    "month": "202602",
+    "start": "2026-02-01T00:00:00Z",
+    "end": "2026-02-28T23:59:00Z",
+    "source_url": "https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/monthly_1min/omni_min202602.asc",
+    "output_path": "C:\\Users\\ardau\\Desktop\\tuah\\data\\training\\storm-feb-2026.csv",
+    "rows": 18064,
+    "starts_at": "2026-02-01T00:00:00+00:00",
+    "ends_at": "2026-02-18T00:14:00+00:00"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "capturedAt": "2026-03-26T22:30:00+03:00",
+  "label": "march-2026-geomagnetic-storm",
+  "description": "Real archive bundle used by HELIOGUARD zero-cost archive mode.",
+  "sources": {
+    "planetary_kp": "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
+    "minute_kp": "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",
+    "mag": "https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json",
+    "plasma": "https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json",
+    "xray": "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
+    "f107": "https://services.swpc.noaa.gov/json/f107_cm_flux.json",
+    "donki": "https://api.nasa.gov/DONKI/CME?startDate=2026-03-20&endDate=2026-03-26&api_key=DEMO_KEY",
+    "tle": "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle",
+    "power_lines": "https://overpass-api.de/api/interpreter"
+  }
+}
