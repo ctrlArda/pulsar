@@ -1,4 +1,4 @@
-import type { CrisisAlert, DashboardState, HeatCell, TelemetrySnapshot, ThreatImpact } from "../types/helioguard";
+import type { CrisisAlert, DashboardState, HeatCell, ModelContribution, TelemetrySnapshot, ThreatImpact } from "../types/helioguard";
 import type { AppLocale } from "./i18n";
 import { translateGeneratedText } from "./i18n";
 
@@ -39,6 +39,7 @@ export interface AlarmDriver {
   label: string;
   score: number;
   detail: string;
+  signedValue?: number;
 }
 
 export interface EvidenceItem {
@@ -81,6 +82,7 @@ const cityOptions: CityOption[] = [
 export const infrastructurePoints: InfrastructurePoint[] = [
   { id: "ist-air", cityId: "istanbul", region: "Marmara", category: "airport", latitude: 41.2753, longitude: 28.7519, labelTr: "Istanbul Havalimani", labelEn: "Istanbul Airport", detailTr: "HF/VHF ve GNSS yedekleme kritik", detailEn: "HF/VHF and GNSS redundancy critical" },
   { id: "ist-grid", cityId: "istanbul", region: "Marmara", category: "grid", latitude: 41.02, longitude: 29.03, labelTr: "Trakya-Marmara Sebeke Dugumu", labelEn: "Thrace-Marmara Grid Node", detailTr: "Yuksek yuk transfer koridoru", detailEn: "High-load transfer corridor" },
+  { id: "ank-air", cityId: "ankara", region: "Ic Anadolu", category: "airport", latitude: 40.1281, longitude: 32.9951, labelTr: "Esenboga Havalimani", labelEn: "Esenboga Airport", detailTr: "Milli hava unsurlari ve sivil trafik icin GNSS/HF kritik", detailEn: "GNSS/HF critical for national air assets and civil traffic" },
   { id: "ank-grid", cityId: "ankara", region: "Ic Anadolu", category: "grid", latitude: 39.95, longitude: 32.88, labelTr: "Ankara TEIAS Omurgasi", labelEn: "Ankara TEIAS Backbone", detailTr: "Ulusal dagitim merkezi", detailEn: "National distribution hub" },
   { id: "ank-gnss", cityId: "ankara", region: "Ic Anadolu", category: "gnss", latitude: 39.90, longitude: 32.75, labelTr: "Ic Anadolu GNSS Dugumu", labelEn: "Central Anatolia GNSS Node", detailTr: "Tarim ve lojistik rotalari", detailEn: "Agriculture and logistics routes" },
   { id: "izm-port", cityId: "izmir", region: "Ege", category: "port", latitude: 38.46, longitude: 27.13, labelTr: "Alsancak Limani", labelEn: "Alsancak Port", detailTr: "Deniz haberlesmesi ve lojistik", detailEn: "Maritime communications and logistics" },
@@ -90,6 +92,7 @@ export const infrastructurePoints: InfrastructurePoint[] = [
   { id: "ada-air", cityId: "adana", region: "Cukurova", category: "airport", latitude: 36.9822, longitude: 35.2804, labelTr: "Cukurova Havalimani", labelEn: "Cukurova Airport", detailTr: "Bolgesel hava ulasimi", detailEn: "Regional air transport" },
   { id: "sam-port", cityId: "samsun", region: "Orta Karadeniz", category: "port", latitude: 41.29, longitude: 36.34, labelTr: "Samsun Limani", labelEn: "Samsun Port", detailTr: "Karadeniz ticaret akis noktasi", detailEn: "Black Sea trade flow node" },
   { id: "gzt-gnss", cityId: "gaziantep", region: "Guneydogu", category: "gnss", latitude: 37.05, longitude: 37.36, labelTr: "Gunaydogu Lojistik GNSS Koridoru", labelEn: "Southeast Logistics GNSS Corridor", detailTr: "Sinir lojistigi ve rota takibi", detailEn: "Border logistics and route tracking" },
+  { id: "erz-air", cityId: "erzurum", region: "Dogu Anadolu", category: "airport", latitude: 39.9565, longitude: 41.1702, labelTr: "Erzurum Havalimani", labelEn: "Erzurum Airport", detailTr: "Yuksek irtifa ucuslari ve kuzey dogu koridoru", detailEn: "High-altitude flights and northeast corridor" },
   { id: "erz-grid", cityId: "erzurum", region: "Dogu Anadolu", category: "grid", latitude: 39.91, longitude: 41.29, labelTr: "Dogu Anadolu Iletim Dugumu", labelEn: "Eastern Anatolia Transmission Node", detailTr: "Uzun iletim hatlari", detailEn: "Long transmission lines" },
   { id: "van-gnss", cityId: "van", region: "Van Havzasi", category: "gnss", latitude: 38.50, longitude: 43.38, labelTr: "Van Sinir GNSS Dugumu", labelEn: "Van Border GNSS Node", detailTr: "Uydu bagimli seyrusefer", detailEn: "Satellite-dependent navigation" },
   { id: "edi-grid", cityId: "edirne", region: "Trakya", category: "grid", latitude: 41.68, longitude: 26.56, labelTr: "Trakya Avrupa Baglantisi", labelEn: "Thrace Europe Interconnect", detailTr: "Sinir otesi iletim koridoru", detailEn: "Cross-border transmission corridor" },
@@ -97,6 +100,69 @@ export const infrastructurePoints: InfrastructurePoint[] = [
 
 function cellRiskPercent(cell: HeatCell, telemetry: TelemetrySnapshot): number {
   return Math.round(Math.min(100, telemetry.localRiskPercent * (0.65 + cell.intensity)));
+}
+
+function localizedContributionLabel(feature: string, locale: AppLocale): string {
+  if (feature === "local_magnetic_latitude") {
+    return locale === "tr" ? "Yerel manyetik enlem" : "Local magnetic latitude";
+  }
+  if (feature === "local_solar_hour") {
+    return locale === "tr" ? "Yerel gunes saati" : "Local solar time";
+  }
+  if (feature === "is_daylight") {
+    return locale === "tr" ? "Gunduz / gece bayragi" : "Daylight flag";
+  }
+  if (feature.startsWith("solar_cycle_")) {
+    return locale === "tr" ? "Gunes dongusu fazi" : "Solar-cycle phase";
+  }
+  const parts = feature.split("_");
+  const stat = parts.at(-1) ?? feature;
+  const maybeWindow = parts.at(-2) ?? "";
+  const signal = maybeWindow.match(/^\d+m$/) ? parts.slice(0, -2).join("_") : parts.slice(0, -1).join("_");
+  const signalLabels: Record<string, { tr: string; en: string }> = {
+    bz: { tr: "Bz", en: "Bz" },
+    bt: { tr: "Bt", en: "Bt" },
+    speed: { tr: "Gunes ruzgari hizi", en: "Solar wind speed" },
+    density: { tr: "Plazma yogunlugu", en: "Plasma density" },
+    temperature: { tr: "Sicaklik", en: "Temperature" },
+    estimated_kp: { tr: "Tahmini Kp", en: "Estimated Kp" },
+    dst_index: { tr: "Dst", en: "Dst" },
+    ey: { tr: "Gunes ruzgari Ey", en: "Solar wind Ey" },
+    epsilon: { tr: "Akasofu epsilon", en: "Akasofu epsilon" },
+    dynamic_pressure: { tr: "Dinamik basinc", en: "Dynamic pressure" },
+  };
+  const statLabels: Record<string, { tr: string; en: string }> = {
+    last: { tr: "son deger", en: "last value" },
+    mean: { tr: "ortalama", en: "mean" },
+    min: { tr: "minimum", en: "minimum" },
+    max: { tr: "maksimum", en: "maximum" },
+    std: { tr: "oynaklik", en: "volatility" },
+    slope: { tr: "trend", en: "trend" },
+  };
+  const windowLabels: Record<string, { tr: string; en: string }> = {
+    "10m": { tr: "10 dk", en: "10m" },
+    "60m": { tr: "1 sa", en: "1h" },
+    "360m": { tr: "6 sa", en: "6h" },
+  };
+  if (signal in signalLabels && maybeWindow in windowLabels && stat in statLabels) {
+    const signalLabel = signalLabels[signal][locale];
+    const windowLabel = windowLabels[maybeWindow][locale];
+    const statLabel = statLabels[stat][locale];
+    return `${signalLabel} ${windowLabel} ${statLabel}`;
+  }
+  return feature;
+}
+
+function contributionDetail(contribution: ModelContribution, locale: AppLocale): string {
+  const magnitude = Math.abs(contribution.contribution).toFixed(1);
+  if (locale === "tr") {
+    return contribution.direction === "worsening"
+      ? `Tahmini Dst hedefini ${magnitude} nT daha negatif yone itti.`
+      : `Tahmini Dst hedefini ${magnitude} nT daha sakin yone itti.`;
+  }
+  return contribution.direction === "worsening"
+    ? `Pushed the predicted Dst ${magnitude} nT toward a more stormy state.`
+    : `Pushed the predicted Dst ${magnitude} nT toward a calmer state.`;
 }
 
 export function getTopRegions(telemetry: TelemetrySnapshot | null, locale: AppLocale): RegionRanking[] {
@@ -127,6 +193,10 @@ export function getAlarmDrivers(telemetry: TelemetrySnapshot | null, locale: App
   const densityScore = Math.round(Math.min(100, telemetry.density * 5));
   const xrayScore = Math.round(Math.min(100, telemetry.xrayFlux * 1e8));
   const f107Score = Math.round(Math.min(100, Math.max(0, telemetry.f107Flux - 100)));
+  const standoffScore = Math.round(Math.min(100, Math.max(0, 7.2 - telemetry.magnetopauseStandoffRe) * 42));
+  const dbdtScore = Math.round(Math.min(100, telemetry.predictedDbdtNtPerMin));
+  const gnssScore = Math.round(Math.min(100, telemetry.gnssRiskPercent));
+  const precursorScore = Math.round(Math.min(100, telemetry.precursorRiskPercent ?? 0));
   const drivers = [
     {
       id: "kp",
@@ -158,18 +228,67 @@ export function getAlarmDrivers(telemetry: TelemetrySnapshot | null, locale: App
       score: Math.max(f107Score, densityScore),
       detail: locale === "tr" ? `F10.7 ${Math.round(telemetry.f107Flux)} sfu, yogunluk ${telemetry.density.toFixed(1)}.` : `F10.7 ${Math.round(telemetry.f107Flux)} sfu, density ${telemetry.density.toFixed(1)}.`,
     },
+    {
+      id: "magnetopause",
+      label: locale === "tr" ? "Manyetopoz sikismasi" : "Magnetopause compression",
+      score: standoffScore,
+      detail: locale === "tr"
+        ? `Subsolar stand-off ${telemetry.magnetopauseStandoffRe.toFixed(2)} Re.`
+        : `Subsolar stand-off ${telemetry.magnetopauseStandoffRe.toFixed(2)} Re.`,
+    },
+    {
+      id: "dbdt",
+      label: locale === "tr" ? "dB/dt induksiyon baskisi" : "dB/dt induction pressure",
+      score: dbdtScore,
+      detail: locale === "tr"
+        ? `Proxy ${telemetry.predictedDbdtNtPerMin.toFixed(1)} nT/dk.`
+        : `Proxy ${telemetry.predictedDbdtNtPerMin.toFixed(1)} nT/min.`,
+    },
+    {
+      id: "gnss",
+      label: locale === "tr" ? "TEC ve GNSS gecikmesi" : "TEC and GNSS delay",
+      score: gnssScore,
+      detail: locale === "tr"
+        ? `GNSS L1 gecikmesi ${telemetry.tecDelayMeters.toFixed(1)} m.`
+        : `GNSS L1 delay ${telemetry.tecDelayMeters.toFixed(1)} m.`,
+    },
+    {
+      id: "precursor",
+      label: locale === "tr" ? "CME / flare precursor" : "CME / flare precursor",
+      score: precursorScore,
+      detail: locale === "tr"
+        ? `${telemetry.precursorHeadline ?? "GOES + DONKI outlook"}${telemetry.precursorHorizonHours !== null ? ` | ufuk ${telemetry.precursorHorizonHours} sa.` : "."}`
+        : `${telemetry.precursorHeadline ?? "GOES + DONKI outlook"}${telemetry.precursorHorizonHours !== null ? ` | horizon ${telemetry.precursorHorizonHours}h.` : "."}`,
+    },
   ];
-  return drivers.sort((left, right) => right.score - left.score);
+  return drivers.filter((driver) => driver.score > 0).sort((left, right) => right.score - left.score);
 }
 
 export function getAiExplainability(telemetry: TelemetrySnapshot | null, locale: AppLocale): { summary: string; topSignals: AlarmDriver[] } {
-  const topSignals = getAlarmDrivers(telemetry, locale).slice(0, 3);
   if (!telemetry) {
     return {
       summary: locale === "tr" ? "AI aciklamasi icin telemetri bekleniyor." : "Waiting for telemetry to explain the model.",
       topSignals: [],
     };
   }
+  if (telemetry.mlFeatureContributions.length > 0 && telemetry.mlPredictedDstIndex !== null) {
+    const contributions = telemetry.mlFeatureContributions;
+    const maxContribution = Math.max(...contributions.map((item) => Math.abs(item.contribution)), 1);
+    const topSignals = contributions.slice(0, 3).map((item) => ({
+      id: item.feature,
+      label: localizedContributionLabel(item.feature, locale),
+      score: Math.max(8, Math.round((Math.abs(item.contribution) / maxContribution) * 100)),
+      detail: contributionDetail(item, locale),
+      signedValue: item.contribution,
+    }));
+    const baseline = telemetry.mlBaselineDstIndex !== null ? `${telemetry.mlBaselineDstIndex.toFixed(1)} nT` : "--";
+    const predicted = `${telemetry.mlPredictedDstIndex.toFixed(1)} nT`;
+    const summary = locale === "tr"
+      ? `Model, baz Dst seviyesi ${baseline} etrafindan ${predicted} hedefine gidiyor. Bu fiziksel hedef daha sonra +${telemetry.mlLeadTimeMinutes ?? 60} dakika ulusal risk tahminine cevriliyor.`
+      : `The model moves from a baseline Dst near ${baseline} toward a ${predicted} target. That physical target is then converted into the national risk forecast for +${telemetry.mlLeadTimeMinutes ?? 60} minutes.`;
+    return { summary, topSignals };
+  }
+  const topSignals = getAlarmDrivers(telemetry, locale).slice(0, 3);
   const mlDelta = telemetry.mlRiskPercent !== null ? telemetry.mlRiskPercent - telemetry.localRiskPercent : 0;
   const summary = locale === "tr"
     ? `Model, fizik skoruna gore ${mlDelta >= 0 ? "yukari" : "asagi"} yone ${Math.abs(mlDelta).toFixed(1)} puan sapma goruyor. En baskin sinyaller ${topSignals.map((item) => item.label.toLowerCase()).join(", ")}.`
@@ -187,7 +306,9 @@ export function getEvidenceItems(state: DashboardState, locale: AppLocale): Evid
     {
       id: "noaa-plasma",
       source: "NOAA SWPC",
-      value: locale === "tr" ? `Bz ${telemetry.bz.toFixed(1)} nT / ${Math.round(telemetry.solarWindSpeed)} km/s` : `Bz ${telemetry.bz.toFixed(1)} nT / ${Math.round(telemetry.solarWindSpeed)} km/s`,
+      value: locale === "tr"
+        ? `Bz ${telemetry.bz.toFixed(1)} nT / ${Math.round(telemetry.solarWindSpeed)} km/s / ${telemetry.dynamicPressureNpa.toFixed(1)} nPa`
+        : `Bz ${telemetry.bz.toFixed(1)} nT / ${Math.round(telemetry.solarWindSpeed)} km/s / ${telemetry.dynamicPressureNpa.toFixed(1)} nPa`,
       detail: locale === "tr" ? "DSCOVR/ACE L1 telemetrisi ile fizik motoru beslendi." : "Physics engine fed from DSCOVR/ACE L1 telemetry.",
       href: "https://services.swpc.noaa.gov/",
     },
@@ -196,7 +317,25 @@ export function getEvidenceItems(state: DashboardState, locale: AppLocale): Evid
       source: "NOAA GOES",
       value: telemetry.xrayClass,
       detail: locale === "tr" ? `X-ray akis ${telemetry.xrayFlux.toExponential(2)}.` : `X-ray flux ${telemetry.xrayFlux.toExponential(2)}.`,
-      href: "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
+      href: "https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json",
+    },
+    {
+      id: "noaa-proton",
+      source: "NOAA GOES Proton",
+      value: telemetry.protonFluxPfu !== null ? `${telemetry.protonFluxPfu.toFixed(1)} pfu` : "--",
+      detail: locale === "tr"
+        ? `Yuksek irtifa radyasyon katmani ${telemetry.officialSolarRadiationScale ?? "S0"} bandi ile birlikte yorumlanir.`
+        : `The high-altitude radiation layer is interpreted together with the ${telemetry.officialSolarRadiationScale ?? "S0"} band.`,
+      href: "https://services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json",
+    },
+    {
+      id: "noaa-dst",
+      source: "NOAA Kyoto Dst",
+      value: telemetry.dstIndex !== null ? `${Math.round(telemetry.dstIndex)} nT` : "--",
+      detail: locale === "tr"
+        ? "Ekvatoryal halka akimi ve storm-time manyetik bozulma gostergesi."
+        : "Storm-time equatorial ring-current disturbance indicator.",
+      href: "https://services.swpc.noaa.gov/products/kyoto-dst.json",
     },
     {
       id: "donki",
@@ -204,6 +343,16 @@ export function getEvidenceItems(state: DashboardState, locale: AppLocale): Evid
       value: `${telemetry.cmeCount}`,
       detail: locale === "tr" ? "CME backlog sayisi son sorgudan alindi." : "CME backlog count fetched from the latest query.",
       href: "https://api.nasa.gov/",
+    },
+    {
+      id: "precursor",
+      source: "CME / Flare Precursor",
+      value: telemetry.precursorRiskPercent !== null
+        ? `${Math.round(telemetry.precursorRiskPercent)}%${telemetry.precursorHorizonHours !== null ? ` / ${telemetry.precursorHorizonHours}${locale === "tr" ? " sa" : "h"}` : ""}`
+        : "--",
+      detail: locale === "tr"
+        ? `${telemetry.precursorHeadline ?? "GOES flare + DONKI CME"} | ${telemetry.precursorIsEarthDirected ? "Earth-directed/ENLIL kaniti mevcut." : "Daha genis bir precursor outlook olarak izleniyor."}`
+        : `${telemetry.precursorHeadline ?? "GOES flare + DONKI CME"} | ${telemetry.precursorIsEarthDirected ? "Earth-directed/ENLIL evidence present." : "Tracked as a broader precursor outlook."}`,
     },
     {
       id: "tle",
@@ -220,10 +369,20 @@ export function getEvidenceItems(state: DashboardState, locale: AppLocale): Evid
       href: "https://wiki.openstreetmap.org/wiki/Overpass_API",
     },
     {
+      id: "physics-engine",
+      source: "Physics Engine",
+      value: `Rmp ${telemetry.magnetopauseStandoffRe.toFixed(1)} Re / dBdt ${telemetry.predictedDbdtNtPerMin.toFixed(1)} nT/dk`,
+      detail: locale === "tr"
+        ? `Bow-shock gecikmesi ${telemetry.bowShockDelaySeconds ?? 0} sn ve GNSS gecikmesi ${telemetry.tecDelayMeters.toFixed(1)} m.`
+        : `Bow-shock delay ${telemetry.bowShockDelaySeconds ?? 0}s and GNSS delay ${telemetry.tecDelayMeters.toFixed(1)} m.`,
+    },
+    {
       id: "model",
       source: "XGBoost",
-      value: telemetry.mlRiskPercent !== null ? `${Math.round(telemetry.mlRiskPercent)}%` : "--",
-      detail: locale === "tr" ? "Gercek OMNI arsiv verisiyle egitilmis +60 dakika tahmin." : "Real-OMNI trained +60 minute prediction.",
+      value: telemetry.mlPredictedDstIndex !== null
+        ? `Dst ${Math.round(telemetry.mlPredictedDstIndex)} nT / ${Math.round(telemetry.mlRiskPercent ?? 0)}%`
+        : "--",
+      detail: locale === "tr" ? "Gercek OMNI arsiv verisiyle egitilmis +60 dakika Dst tahmini ve ondan tureyen risk." : "A real-OMNI trained +60 minute Dst forecast and the risk derived from it.",
     },
     {
       id: "official-outlook",
@@ -253,6 +412,18 @@ export function getTimeline(state: DashboardState, locale: AppLocale): TimelineE
   }
   return [
     {
+      id: "precursor",
+      title: locale === "tr" ? "CME / flare prekursoru kilitlendi" : "CME / flare precursor locked",
+      detail: locale === "tr"
+        ? telemetry.precursorRiskPercent !== null
+          ? `${telemetry.precursorHeadline ?? "GOES + DONKI"} | risk ${Math.round(telemetry.precursorRiskPercent)}%${telemetry.precursorHorizonHours !== null ? ` | ufuk ${telemetry.precursorHorizonHours} sa.` : "."}`
+          : "Uzun ufuklu precursor sinyali aktif degil."
+        : telemetry.precursorRiskPercent !== null
+          ? `${telemetry.precursorHeadline ?? "GOES + DONKI"} | risk ${Math.round(telemetry.precursorRiskPercent)}%${telemetry.precursorHorizonHours !== null ? ` | horizon ${telemetry.precursorHorizonHours}h.` : "."}`
+          : "The long-horizon precursor signal is not active.",
+      status: telemetry.precursorRiskPercent !== null ? "done" : "upcoming",
+    },
+    {
       id: "detect",
       title: locale === "tr" ? "L1 telemetri toplandi" : "L1 telemetry ingested",
       detail: locale === "tr" ? `Bz ${telemetry.bz.toFixed(1)} nT ve hiz ${Math.round(telemetry.solarWindSpeed)} km/s.` : `Bz ${telemetry.bz.toFixed(1)} nT and speed ${Math.round(telemetry.solarWindSpeed)} km/s.`,
@@ -260,14 +431,26 @@ export function getTimeline(state: DashboardState, locale: AppLocale): TimelineE
     },
     {
       id: "estimate",
-      title: locale === "tr" ? "ETA hesaplandi" : "ETA calculated",
-      detail: locale === "tr" ? `${telemetry.etaSeconds ?? 0} saniyelik gecis penceresi.` : `${telemetry.etaSeconds ?? 0}s propagation window.`,
+      title: locale === "tr" ? "Bow-shock ETA hesaplandi" : "Bow-shock ETA calculated",
+      detail: locale === "tr"
+        ? `${telemetry.etaSeconds ?? 0} saniyelik gecis penceresi | bow-shock gecikmesi ${telemetry.bowShockDelaySeconds ?? 0} sn.`
+        : `${telemetry.etaSeconds ?? 0}s propagation window | bow-shock delay ${telemetry.bowShockDelaySeconds ?? 0}s.`,
+      status: "done",
+    },
+    {
+      id: "physics",
+      title: locale === "tr" ? "Fizik motoru cozuldu" : "Physics engine solved",
+      detail: locale === "tr"
+        ? `Rmp ${telemetry.magnetopauseStandoffRe.toFixed(1)} Re | dB/dt ${telemetry.predictedDbdtNtPerMin.toFixed(1)} nT/dk | GNSS ${telemetry.tecDelayMeters.toFixed(1)} m.`
+        : `Rmp ${telemetry.magnetopauseStandoffRe.toFixed(1)} Re | dB/dt ${telemetry.predictedDbdtNtPerMin.toFixed(1)} nT/min | GNSS ${telemetry.tecDelayMeters.toFixed(1)} m.`,
       status: "done",
     },
     {
       id: "ml",
       title: locale === "tr" ? "ML tahmini olusturuldu" : "ML forecast generated",
-      detail: locale === "tr" ? `+60 dakika risk ${Math.round(telemetry.mlRiskPercent ?? 0)}%.` : `+60 minute risk ${Math.round(telemetry.mlRiskPercent ?? 0)}%.`,
+      detail: locale === "tr"
+        ? `+60 dakika Dst ${Math.round(telemetry.mlPredictedDstIndex ?? 0)} nT | risk ${Math.round(telemetry.mlRiskPercent ?? 0)}%.`
+        : `+60 minute Dst ${Math.round(telemetry.mlPredictedDstIndex ?? 0)} nT | risk ${Math.round(telemetry.mlRiskPercent ?? 0)}%.`,
       status: "done",
     },
     {
@@ -357,13 +540,25 @@ export function buildReportContent(state: DashboardState, cityId: string, locale
     `national_risk_band: ${state.telemetry ? `${state.telemetry.riskBandLow}-${state.telemetry.riskBandHigh}%` : "--"}`,
     `ml_risk: ${state.telemetry?.mlRiskPercent ?? "--"}%`,
     `ml_risk_band: ${state.telemetry && state.telemetry.mlRiskBandLow !== null && state.telemetry.mlRiskBandHigh !== null ? `${state.telemetry.mlRiskBandLow}-${state.telemetry.mlRiskBandHigh}%` : "--"}`,
+    `ml_predicted_dst: ${state.telemetry?.mlPredictedDstIndex ?? "--"} nT`,
+    `ml_predicted_dst_band: ${state.telemetry && state.telemetry.mlPredictedDstBandLow !== null && state.telemetry.mlPredictedDstBandHigh !== null ? `${state.telemetry.mlPredictedDstBandLow}-${state.telemetry.mlPredictedDstBandHigh} nT` : "--"}`,
     `forecast_confidence: ${state.telemetry?.forecastConfidencePercent ?? "--"}%`,
+    `precursor_risk: ${state.telemetry?.precursorRiskPercent ?? "--"}%`,
+    `precursor_risk_band: ${state.telemetry && state.telemetry.precursorRiskBandLow !== null && state.telemetry.precursorRiskBandHigh !== null ? `${state.telemetry.precursorRiskBandLow}-${state.telemetry.precursorRiskBandHigh}%` : "--"}`,
+    `precursor_horizon_hours: ${state.telemetry?.precursorHorizonHours ?? "--"}`,
+    `precursor_confidence: ${state.telemetry?.precursorConfidencePercent ?? "--"}%`,
     `arrival_window_seconds: ${state.telemetry ? `${state.telemetry.etaWindowStartSeconds ?? "--"}-${state.telemetry.etaWindowEndSeconds ?? "--"}` : "--"}`,
+    `bow_shock_delay_seconds: ${state.telemetry?.bowShockDelaySeconds ?? "--"}`,
     `storm_scale_band: ${state.telemetry?.stormScaleBand ?? "--"}`,
+    `dynamic_pressure_npa: ${state.telemetry?.dynamicPressureNpa ?? "--"}`,
+    `magnetopause_standoff_re: ${state.telemetry?.magnetopauseStandoffRe ?? "--"}`,
+    `predicted_dbdt_nt_per_min: ${state.telemetry?.predictedDbdtNtPerMin ?? "--"}`,
+    `tec_delay_meters: ${state.telemetry?.tecDelayMeters ?? "--"}`,
     `official_scales: ${state.telemetry ? `${state.telemetry.officialGeomagneticScale ?? "--"}/${state.telemetry.officialRadioBlackoutScale ?? "--"}/${state.telemetry.officialSolarRadiationScale ?? "--"}` : "--"}`,
     `official_watch: ${state.telemetry?.officialWatchHeadline ?? "--"}`,
     `official_alert: ${state.telemetry?.officialAlertHeadline ?? "--"}`,
     `validation_mae: ${state.telemetry?.validationMae ?? "--"}`,
+    `validation_band_coverage: ${state.telemetry?.validationBandCoverage ?? "--"}%`,
     `city: ${drilldown?.city ?? "--"}`,
     `city_risk: ${drilldown?.riskPercent ?? "--"}%`,
     "",

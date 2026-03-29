@@ -1,0 +1,30 @@
+{
+  "network": "SuperMAG Ground-Based Magnetometers",
+  "description": "Local magnetic disturbance integration node",
+  "stations": [
+    {
+      "id": "KAD",
+      "name": "Kadirli (Local Node)",
+      "latitude": 37.37,
+      "longitude": 36.09
+    },
+    {
+      "id": "IST",
+      "name": "Istanbul (Kandilli)",
+      "latitude": 41.01,
+      "longitude": 28.97
+    },
+    {
+      "id": "BOU",
+      "name": "Boulder",
+      "latitude": 40.13,
+      "longitude": -105.23
+    },
+    {
+      "id": "THL",
+      "name": "Thule",
+      "latitude": 77.47,
+      "longitude": 290.77
+    }
+  ]
+}

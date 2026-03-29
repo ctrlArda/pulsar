@@ -153,7 +153,7 @@ def _read_omni_ascii(path: Path) -> pd.DataFrame:
         utc=True,
         errors="coerce",
     )
-    for column in ["bt", "bz_gsm", "flow_speed", "proton_density", "temperature"]:
+    for column in ["bt", "bz_gsm", "flow_speed", "proton_density", "temperature", "sym_h_index"]:
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
 
     frame.loc[frame["bt"].abs() > 900.0, "bt"] = pd.NA
@@ -161,8 +161,10 @@ def _read_omni_ascii(path: Path) -> pd.DataFrame:
     frame.loc[frame["flow_speed"] > 9000.0, "flow_speed"] = pd.NA
     frame.loc[frame["proton_density"] > 900.0, "proton_density"] = pd.NA
     frame.loc[frame["temperature"] > 9_000_000.0, "temperature"] = pd.NA
+    frame.loc[frame["sym_h_index"].abs() > 5000.0, "sym_h_index"] = pd.NA
 
     cleaned = frame.dropna(subset=["time_tag", "bt", "bz_gsm", "flow_speed", "proton_density", "temperature"]).copy()
+    cleaned["sym_h_index"] = pd.to_numeric(cleaned["sym_h_index"], errors="coerce")
     cleaned["estimated_kp"] = cleaned.apply(
         lambda row: estimate_kp_from_solar_wind(
             float(row["bz_gsm"]),
@@ -177,8 +179,9 @@ def _read_omni_ascii(path: Path) -> pd.DataFrame:
             "bz_gsm": "bz",
             "flow_speed": "speed",
             "proton_density": "density",
+            "sym_h_index": "dst_index",
         }
-    )[["time_tag", "bz", "bt", "speed", "density", "temperature", "estimated_kp", "kp_index"]]
+    )[["time_tag", "bz", "bt", "speed", "density", "temperature", "estimated_kp", "kp_index", "dst_index"]]
 
 
 def prepare_datasets(raw_dir: Path, output_dir: Path, refresh: bool = False) -> list[dict[str, object]]:

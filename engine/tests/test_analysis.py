@@ -20,6 +20,22 @@ def test_estimate_kp_from_solar_wind_grows_with_storm_strength() -> None:
 
 
 def test_compute_local_risk_percent_rewards_early_detection() -> None:
-    without_trigger = compute_local_risk_percent(estimated_kp=6.5, bz=-12.0, speed=650.0, density=10.0, magnetic_latitude=27.0, early_detection=False)
-    with_trigger = compute_local_risk_percent(estimated_kp=6.5, bz=-12.0, speed=650.0, density=10.0, magnetic_latitude=27.0, early_detection=True)
+    without_trigger = compute_local_risk_percent(
+        estimated_kp=6.5,
+        bz=-12.0,
+        speed=650.0,
+        density=10.0,
+        dst_index=-90.0,
+        magnetic_latitude=27.0,
+        early_detection=False,
+    )
+    with_trigger = compute_local_risk_percent(
+        estimated_kp=6.5,
+        bz=-12.0,
+        speed=650.0,
+        density=10.0,
+        dst_index=-90.0,
+        magnetic_latitude=27.0,
+        early_detection=True,
+    )
     assert with_trigger > without_trigger

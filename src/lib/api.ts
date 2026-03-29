@@ -1,5 +1,5 @@
 import { env } from "./config";
-import type { DashboardState, OperatingMode } from "../types/helioguard";
+import type { DashboardState, OperatingMode, WebhookPreview } from "../types/helioguard";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
@@ -27,4 +27,12 @@ export function setOperatingMode(mode: OperatingMode): Promise<DashboardState> {
 
 export function getTerminalStreamUrl(): string {
   return `${env.apiBaseUrl}/api/stream/terminal`;
+}
+
+export function getWebhookPreview(): Promise<WebhookPreview> {
+  return request<WebhookPreview>("/api/webhooks/preview");
+}
+
+export function getLiveFlights(): Promise<{ flights: any[] }> {
+  return request<{ flights: any[] }>("/api/flights/live");
 }

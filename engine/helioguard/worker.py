@@ -61,10 +61,21 @@ class HelioguardWorker:
         self._last_published_alert_id: str | None = None
 
     async def start(self) -> None:
-        if self._task is None:
+        if self._task is None or self._task.done():
             self.terminal.push("worker", "HELIOGUARD motoru baslatildi.", "info")
             await self.run_once()
             self._task = asyncio.create_task(self._loop())
+
+    async def stop(self) -> None:
+        if self._task is None:
+            return
+        self._task.cancel()
+        try:
+            await self._task
+        except asyncio.CancelledError:
+            pass
+        finally:
+            self._task = None
 
     async def _loop(self) -> None:
         while True:
@@ -84,38 +95,59 @@ class HelioguardWorker:
 
     async def run_once(self) -> None:
         async with self._lock:
-            bundle = await self.data_source.load(self.current_mode)
-            telemetry, alert = build_dashboard_artifacts(bundle, self.predictor, self.settings)
-            self.telemetry = telemetry
-            self.active_alert = alert
+            try:
+                bundle = await self.data_source.load(self.current_mode)
+                telemetry, alert = await asyncio.to_thread(build_dashboard_artifacts, bundle, self.predictor, self.settings)
+                self.telemetry = telemetry
+                self.active_alert = alert
 
-            if alert is not None and alert.id != self._last_published_alert_id:
-                self.alerts.appendleft(alert)
-                self._last_published_alert_id = alert.id
+                if alert is not None and alert.id != self._last_published_alert_id:
+                    self.alerts.appendleft(alert)
+                    self._last_published_alert_id = alert.id
+                    self.terminal.push(
+                        "alert",
+                        f"{alert.title} | risk %{telemetry.local_risk_percent:.0f} | ETA {telemetry.eta_seconds or 0}s",
+                        "critical" if alert.severity == "critical" else "warn",
+                    )
+
+                summary_level = "critical" if telemetry.early_detection else "warn" if telemetry.local_risk_percent >= 55 else "info"
                 self.terminal.push(
-                    "alert",
-                    f"{alert.title} | risk %{telemetry.local_risk_percent:.0f} | ETA {telemetry.eta_seconds or 0}s",
-                    "critical" if alert.severity == "critical" else "warn",
+                    "noaa",
+                    f"Bz={telemetry.bz:.1f} nT | v={telemetry.solar_wind_speed:.0f} km/s | n={telemetry.density:.1f} | Kp*={telemetry.estimated_kp:.1f}",
+                    summary_level,
                 )
-
-            summary_level = "critical" if telemetry.early_detection else "warn" if telemetry.local_risk_percent >= 55 else "info"
-            self.terminal.push(
-                "noaa",
-                f"Bz={telemetry.bz:.1f} nT | v={telemetry.solar_wind_speed:.0f} km/s | n={telemetry.density:.1f} | Kp*={telemetry.estimated_kp:.1f}",
-                summary_level,
-            )
-            self.terminal.push(
-                "science",
-                f"X-ray {telemetry.xray_class} | F10.7={telemetry.f107_flux:.0f} | CME backlog={telemetry.cme_count}",
-                "warn" if telemetry.xray_flux >= 1e-6 else "info",
-            )
-            self.terminal.push(
-                "grid",
-                f"Power-line katmani {len(telemetry.power_lines.get('features', []))} geometri | ulusal risk %{telemetry.local_risk_percent:.0f}",
-                "warn" if telemetry.local_risk_percent >= 45 else "info",
-            )
-
-            await self.store.persist(telemetry, alert if alert and alert.id == self._last_published_alert_id else None)
+                self.terminal.push(
+                    "science",
+                    f"X-ray {telemetry.xray_class} | F10.7={telemetry.f107_flux:.0f} | CME backlog={telemetry.cme_count}",
+                    "warn" if telemetry.xray_flux >= 1e-6 else "info",
+                )
+                if telemetry.precursor_risk_percent is not None:
+                    horizon_label = f"{telemetry.precursor_horizon_hours} sa" if telemetry.precursor_horizon_hours is not None else "--"
+                    self.terminal.push(
+                        "precursor",
+                        f"CME/flare outlook %{telemetry.precursor_risk_percent:.0f} | ufuk {horizon_label} | CME hiz {(telemetry.precursor_cme_speed_kms or 0.0):.0f} km/s",
+                        "warn" if telemetry.precursor_risk_percent >= 45 else "info",
+                    )
+                self.terminal.push(
+                    "physics",
+                    f"Pdyn={telemetry.dynamic_pressure_npa:.1f} nPa | Rmp={telemetry.magnetopause_standoff_re:.1f} Re | dB/dt~={telemetry.predicted_dbdt_nt_per_min:.1f} nT/dk | TEC~={telemetry.tec_delay_meters:.1f} m",
+                    "warn" if telemetry.predicted_dbdt_nt_per_min >= 45 or telemetry.geo_direct_exposure else "info",
+                )
+                self.terminal.push(
+                    "grid",
+                    f"Power-line katmani {len(telemetry.power_lines.get('features', []))} geometri | ulusal risk %{telemetry.local_risk_percent:.0f}",
+                    "warn" if telemetry.local_risk_percent >= 45 else "info",
+                )
+                if telemetry.turkish_satellites:
+                    top_satellite = telemetry.turkish_satellites[0]
+                    self.terminal.push(
+                        "satellite",
+                        f"Turk uydu filosu %{telemetry.turkish_satellite_risk_percent:.0f} | {top_satellite.name} %{top_satellite.overall_risk_percent:.0f} | {top_satellite.orbit_class}",
+                        "warn" if top_satellite.overall_risk_percent >= 45 else "info",
+                    )
+                await self.store.persist(telemetry, alert if alert and alert.id == self._last_published_alert_id else None)
+            except Exception as e:
+                self.terminal.push("worker", f"Akim sirasinda hata olustu: {str(e)}", "critical")
 
     def get_state(self) -> DashboardState:
         return DashboardState(

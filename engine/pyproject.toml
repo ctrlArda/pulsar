@@ -23,6 +23,7 @@ dependencies = [
 [project.scripts]
 helioguard-train = "helioguard.training.train_xgboost:main"
 helioguard-jury-test = "helioguard.jury_smoke_test:main"
+helioguard-backend-test = "helioguard.backend_test:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
