@@ -1,4 +1,4 @@
-# 🌍 Helioguard ☀️
+# Helioguard 
 **Milli Uzay Havası Erken Uyarı ve Risk Yönetim Sistemi**
 
 **Helioguard**, Türkiye'nin kritik ulusal altyapılarını siber ve fiziksel etkilere açık hale getiren aşırı jeomanyetik fırtınalara, güneş patlamalarına (Solar Flares) ve koronal kütle atımlarına (CME) karşı korumak için tasarlanmış, sıfır maliyet (zero-cost) hedefli, ileri seviye otonom bir Uzay Havası Karar Destek Sistemidir (DSS).
