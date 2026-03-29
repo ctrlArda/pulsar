@@ -1,9 +1,7 @@
-# Helioguard 
+# 🌍 Helioguard ☀️
 **Milli Uzay Havası Erken Uyarı ve Risk Yönetim Sistemi**
 
 **Helioguard**, Türkiye'nin kritik ulusal altyapılarını siber ve fiziksel etkilere açık hale getiren aşırı jeomanyetik fırtınalara, güneş patlamalarına (Solar Flares) ve koronal kütle atımlarına (CME) karşı korumak için tasarlanmış, sıfır maliyet (zero-cost) hedefli, ileri seviye otonom bir Uzay Havası Karar Destek Sistemidir (DSS).
-
-Sistem, gökyüzündeki görünmez tehlikelere karşı yeryüzündeki dijital ve fiziksel varlıklarımızı savunan bir erken uyarı ve eylem mekanizmasıdır. `mimari.md` ve `PROJE_DETAYI.md` referanslarına tamamen sadık kalınarak üç temel katmanda dizayn edilmiştir. Üstelik sıfır maliyet (zero-cost) kurulum ile bağımsız donanım ve hizmetlere olan ihtiyacı sıfırlayarak, offline çalışma ve yerel cache mimarisine öncelik verir.
 
 ---
 
@@ -16,7 +14,9 @@ Sistem, gökyüzündeki görünmez tehlikelere karşı yeryüzündeki dijital ve
 6. [Kurulum ve Çalıştırma (Hızlı Başlangıç)](#6-kurulum-ve-calistirma-hizli-baslangic)
 7. [XGBoost Model Eğitimi (Tarihsel Modelleme)](#7-xgboost-model-egitimi-tarihsel-modelleme)
 8. [Testler ve Jüri "Smoke Test" Kontrolü](#8-testler-ve-juri-smoke-test-kontrolu)
-9. [Hackathon Özel: Arşiv (Backtesting) Modu](#9-hackathon-ozel-arsiv-backtesting-modu)
+9. [Kurumsal API Yüzeyi](#9-kurumsal-api-yuzeyi)
+10. [Dosya Yapısı](#10-dosya-yapisi)
+11. [Önemli Not](#11-onemli-not)
 
 ---
 
@@ -185,13 +185,7 @@ python -m helioguard.backend_test
 
 ---
 
-## 9. Hackathon Özel: Arşiv (Backtesting) Modu
-
-Jüri değerlendirme anında Güneş **sessiz ve tehlikesiz** olabilir. Sistemin tepkiselliğini kaybetmemek ve fake veri yasaklarını delmemek adına projeye bir **"Arşiv Verisiyle Besle"** butonu eklenmiştir. 
-Bu arka plan modu tetiklendiğinde motor, canlı NOAA okumayı bırakıp yerel sunucudaki `data/archive/march-2026-geomagnetic-storm/` geçmiş kasetini saniye saniye simüle etmeye başlar. Fırtına o an vuruyormuş gibi XAI katmanı, ETA sayaçları ve ısı haritaları jürinin testine kusursuz şekilde sunulur.
-```
-
-## Kurumsal API yuzeyi
+## 9. Kurumsal API Yüzeyi
 
 Kurum entegrasyonlari icin sifir-maliyet REST yuzeyi:
 
@@ -203,7 +197,7 @@ Kurum entegrasyonlari icin sifir-maliyet REST yuzeyi:
 
 `/api/webhooks/preview`, ASELSAN, TUSAS veya TEIAS benzeri adaptorlerin kapali sistemlere aktarabilecegi ornek alarm payload'ini verir.
 
-## Dosya yapisi
+## 10. Dosya Yapısı
 
 - `engine/helioguard/data_sources.py`: NOAA, DONKI, CelesTrak, Overpass ve arsiv baglantilari
 - `engine/helioguard/analysis.py`: fiziksel kurallar, risk skoru, cihaz ayrisma ve SOP uretimi
@@ -212,7 +206,7 @@ Kurum entegrasyonlari icin sifir-maliyet REST yuzeyi:
 - `engine/helioguard/app.py`: FastAPI API + SSE terminal akisi
 - `src/`: React paneli
 
-## Not
+## 11. Önemli Not
 
 Canli sistem, varsayilan olarak ucretsiz NOAA, NASA, CelesTrak ve Overpass kaynaklarina baglanir; zorunlu ucretli servis yoktur. Supabase ve Mapbox ancak rapordaki orijinal topolojiyi sonradan birebir canlandirmak istenirse opsiyonel olarak eklenir.
 
@@ -221,6 +215,5 @@ Bilimsel ve operasyonel sinir:
 - Sistem gercek resmi/veri-kokenli kaynaklari kullansa da, uretilen yerel risk skoru ve ML tahmini operasyonel resmi uyari yerine gecmez.
 - Panel, tek bir kesin sayi yerine `belirsizlik araligi`, `varis penceresi` ve `guven puani` gosterecek sekilde tasarlanmistir.
 - Hayat, ucus emniyeti, enerji sebekesi koruma veya hukuki yukumluluk doguran kararlar icin nihai referans olarak resmi NOAA/SWPC yayinlari ve yetkili operasyon merkezleri kullanilmalidir.
-#   p u l s a r 
- 
- 
+
+
